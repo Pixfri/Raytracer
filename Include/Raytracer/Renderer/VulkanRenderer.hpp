@@ -28,20 +28,6 @@ namespace Raytracer::Renderer {
         DescriptorAllocatorGrowable FrameDescriptors;
     };
 
-    struct ComputePushConstants {
-        glm::vec4 Data1;
-        glm::vec4 Data2;
-        glm::vec4 Data3;
-        glm::vec4 Data4;
-    };
-
-    struct ComputeShader {
-        VkPipeline Pipeline;
-        VkPipelineLayout Layout;
-
-        ComputePushConstants Data;
-    };
-
     class VulkanRenderer {
         bool m_RendererInitialized = false;
 
@@ -62,22 +48,15 @@ namespace Raytracer::Renderer {
         VkCommandBuffer m_ImmediateCommandBuffer;
         VkCommandPool m_ImmediateCommandPool;
 
-        AllocatedImage m_DrawImage;
-        VkExtent2D m_DrawExtent;
-        float m_RenderScale = 1.0f;
-
         DescriptorAllocatorGrowable m_GlobalDescriptorAllocator;
 
         VkDescriptorSet m_DrawImageDescriptors;
         VkDescriptorSetLayout m_DrawImageDescriptorLayout;
 
-        VkPipelineLayout m_ComputePipelineLayout;
-
-        ComputeShader m_Raytrace;
-
-        VkDescriptorSetLayout m_SingleImageDescriptorLayout;
-
     public:
+        AllocatedImage DrawImage;
+        VkExtent2D DrawExtent;
+        float RenderScale = 1.0f;
         
         VulkanRenderer(const Window& window, const DebugLevel& debugLevel);
         ~VulkanRenderer();
@@ -90,7 +69,9 @@ namespace Raytracer::Renderer {
 
         void PlanDescriptorPoolsDeletion(DescriptorAllocatorGrowable& allocator);
         void PlanDeletion(std::function<void()>&& deletor);
-        void Draw(Window& window);
+
+        VkCommandBuffer BeginCommandBuffer(const Window& window);
+        void EndCommandBuffer(Window& window);
 
         void ImmediateSubmit(const std::function<void(VkCommandBuffer commandBuffer)>& function) const;
 
@@ -106,11 +87,6 @@ namespace Raytracer::Renderer {
         void InitializeFramesCommandBuffers();
         void InitializeImmediateCommandBuffer();
         void InitializeSynchronisationPrimitives();
-        void InitializeDescriptors();
-        void InitializePipelines();
-        void InitializeComputePipelines();
-
-        void Raytrace(VkCommandBuffer commandBuffer) const;
 
         [[nodiscard]] FrameData& GetCurrentFrame() {
             return m_Frames[m_FrameNumber % g_FrameOverlap];

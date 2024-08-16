@@ -8,9 +8,6 @@
 #include <Raytracer/Renderer/VulkanUtils/VulkanImageUtils.hpp>
 #include <Raytracer/Renderer/VulkanUtils/VulkanPipelineUtils.hpp>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/transform.hpp>
-
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
@@ -22,8 +19,6 @@ namespace Raytracer::Renderer {
         InitializeSwapchain(window);
         InitializeCommands();
         InitializeSynchronisationPrimitives();
-        InitializeDescriptors();
-        InitializePipelines();
 
         m_RendererInitialized = true;
     }
@@ -49,18 +44,18 @@ namespace Raytracer::Renderer {
         m_MainDeletionQueue.PushFunction(std::move(deletor));
     }
 
-    void VulkanRenderer::Draw(Window& window) {
+    VkCommandBuffer VulkanRenderer::BeginCommandBuffer(const Window& window) {
         const VkExtent2D swapchainExtent = m_Swapchain->GetSwapchainExtent();
 
-        m_DrawExtent.width = static_cast<u32>(static_cast<f32>(std::min(
-            swapchainExtent.width, m_DrawImage.ImageExtent.width)) * m_RenderScale);
-        m_DrawExtent.height = static_cast<u32>(static_cast<f32>(std::min(
-            swapchainExtent.height, m_DrawImage.ImageExtent.height)) * m_RenderScale);
+        DrawExtent.width = static_cast<u32>(static_cast<f32>(std::min(
+            swapchainExtent.width, DrawImage.ImageExtent.width)));
+        DrawExtent.height = static_cast<u32>(static_cast<f32>(std::min(
+            swapchainExtent.height, DrawImage.ImageExtent.height)));
 
         auto& frame = GetCurrentFrame();
 
-        VkResult lastVkError = m_Swapchain->AcquireNextImage(*m_Device, frame);
-        if (lastVkError == VK_ERROR_OUT_OF_DATE_KHR || lastVkError == VK_SUBOPTIMAL_KHR || window.
+        if (const VkResult lastVkError = m_Swapchain->AcquireNextImage(*m_Device, frame);
+            lastVkError == VK_ERROR_OUT_OF_DATE_KHR || lastVkError == VK_SUBOPTIMAL_KHR || window.
             ShouldInvalidateSwapchain()) {
             m_SwapchainResizeRequired = true;
         }
@@ -77,28 +72,33 @@ namespace Raytracer::Renderer {
 
         VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo))
 
-        VulkanUtils::TransitionImage(cmd, m_DrawImage.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+        VulkanUtils::TransitionImage(cmd, DrawImage.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-        Raytrace(cmd);
+        return cmd;
+    }
 
+    void VulkanRenderer::EndCommandBuffer(Window& window) {
+        const auto& frame = GetCurrentFrame();
+        const auto cmd = frame.MainCommandBuffer;
+        
         //transition the draw image and the swapchain image into their correct transfer layouts
-        VulkanUtils::TransitionImage(cmd, m_DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL,
+        VulkanUtils::TransitionImage(cmd, DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL,
                                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
         VulkanUtils::TransitionImage(cmd, m_Swapchain->GetImageAtIndex(frame.SwapchainImageIndex),
                                      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         // execute a copy from the draw image into the swapchain
-        VulkanUtils::CopyImageToImage(cmd, m_DrawImage.Image,
-                                      m_Swapchain->GetImageAtIndex(frame.SwapchainImageIndex), m_DrawExtent,
+        VulkanUtils::CopyImageToImage(cmd, DrawImage.Image,
+                                      m_Swapchain->GetImageAtIndex(frame.SwapchainImageIndex), DrawExtent,
                                       m_Swapchain->GetSwapchainExtent());
 
         // set swapchain image layout to Present so we can show it on the screen
         VulkanUtils::TransitionImage(cmd, m_Swapchain->GetImageAtIndex(frame.SwapchainImageIndex),
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-        VK_CHECK(vkEndCommandBuffer(frame.MainCommandBuffer))
+        VK_CHECK(vkEndCommandBuffer(cmd))
 
-        const VkCommandBufferSubmitInfo cmdInfo = VulkanInit::CommandBufferSubmitInfo(frame.MainCommandBuffer);
+        const VkCommandBufferSubmitInfo cmdInfo = VulkanInit::CommandBufferSubmitInfo(cmd);
 
         const VkSemaphoreSubmitInfo waitInfo = VulkanInit::SemaphoreSubmitInfo(
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, frame.SwapchainSemaphore);
@@ -122,8 +122,8 @@ namespace Raytracer::Renderer {
 
         presentInfo.pImageIndices = &frame.SwapchainImageIndex;
 
-        lastVkError = vkQueuePresentKHR(m_Device->GetPresentQueue(), &presentInfo);
-        if (lastVkError == VK_ERROR_OUT_OF_DATE_KHR || lastVkError == VK_SUBOPTIMAL_KHR || window.
+        if (const VkResult lastVkError = vkQueuePresentKHR(m_Device->GetPresentQueue(), &presentInfo);
+            lastVkError == VK_ERROR_OUT_OF_DATE_KHR || lastVkError == VK_SUBOPTIMAL_KHR || window.
             ShouldInvalidateSwapchain()) {
             m_SwapchainResizeRequired = true;
         }
@@ -196,8 +196,8 @@ namespace Raytracer::Renderer {
         };
 
         // Hardcoding the draw format to a 32-bit float.
-        m_DrawImage.ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
-        m_DrawImage.ImageExtent = drawImageExtent;
+        DrawImage.ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+        DrawImage.ImageExtent = drawImageExtent;
 
         VkImageUsageFlags drawImageUsages{};
         drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -206,7 +206,7 @@ namespace Raytracer::Renderer {
         drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         const VkImageCreateInfo drawImageInfo = VulkanInit::ImageCreateInfo(
-            m_DrawImage.ImageFormat, drawImageUsages, drawImageExtent);
+            DrawImage.ImageFormat, drawImageUsages, drawImageExtent);
 
         // For the draw image, we want to allocate it from GPU local memory.
         VmaAllocationCreateInfo drawImageAllocInfo{};
@@ -214,19 +214,19 @@ namespace Raytracer::Renderer {
         drawImageAllocInfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         // Allocate and create the image.
-        vmaCreateImage(m_Allocator, &drawImageInfo, &drawImageAllocInfo, &m_DrawImage.Image,
-                       &m_DrawImage.Allocation, nullptr);
+        vmaCreateImage(m_Allocator, &drawImageInfo, &drawImageAllocInfo, &DrawImage.Image,
+                       &DrawImage.Allocation, nullptr);
 
         // Build an image view for the draw image to use for rendering.
         const VkImageViewCreateInfo drawImageViewInfo = VulkanInit::ImageViewCreateInfo(
-            m_DrawImage.ImageFormat, m_DrawImage.Image, VK_IMAGE_ASPECT_COLOR_BIT);
+            DrawImage.ImageFormat, DrawImage.Image, VK_IMAGE_ASPECT_COLOR_BIT);
 
-        VK_CHECK(vkCreateImageView(m_Device->GetDevice(), &drawImageViewInfo, nullptr, &m_DrawImage.ImageView))
+        VK_CHECK(vkCreateImageView(m_Device->GetDevice(), &drawImageViewInfo, nullptr, &DrawImage.ImageView))
 
         // Add to deletion queue.
         m_MainDeletionQueue.PushFunction([this]() {
-            vkDestroyImageView(m_Device->GetDevice(), m_DrawImage.ImageView, nullptr);
-            vmaDestroyImage(m_Allocator, m_DrawImage.Image, m_DrawImage.Allocation);
+            vkDestroyImageView(m_Device->GetDevice(), DrawImage.ImageView, nullptr);
+            vmaDestroyImage(m_Allocator, DrawImage.Image, DrawImage.Allocation);
         });
     }
 
@@ -324,112 +324,6 @@ namespace Raytracer::Renderer {
         });
     }
 
-    void VulkanRenderer::InitializeDescriptors() {
-        // Create a descriptor pool that will hold 10 sets with 1 image each.
-        std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}
-        };
-
-        m_GlobalDescriptorAllocator.Initialize(m_Device->GetDevice(), 10, sizes);
-
-        // Make the descriptor set layout for the compute draw.
-        {
-            DescriptorLayoutBuilder builder;
-            builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-            m_DrawImageDescriptorLayout = builder.Build(m_Device->GetDevice(), VK_SHADER_STAGE_COMPUTE_BIT);
-        }
-
-        // Allocate a descriptor set for the compute draw.
-        m_DrawImageDescriptors = m_GlobalDescriptorAllocator.Allocate(
-            m_Device->GetDevice(), m_DrawImageDescriptorLayout);
-
-        DescriptorWriter writer;
-        writer.WriteImage(0, m_DrawImage.ImageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL,
-                          VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        writer.UpdateSet(m_Device->GetDevice(), m_DrawImageDescriptors);
-
-        // Make sure both the descriptor allocator and the new layout get cleaned up properly.
-        m_MainDeletionQueue.PushFunction([&]() {
-            m_GlobalDescriptorAllocator.DestroyPools(m_Device->GetDevice());
-
-            vkDestroyDescriptorSetLayout(m_Device->GetDevice(), m_DrawImageDescriptorLayout, nullptr);
-        });
-    }
-
-    void VulkanRenderer::InitializePipelines() {
-        InitializeComputePipelines();
-    }
-
-    void VulkanRenderer::InitializeComputePipelines() {
-        // Create pipeline layout
-        VkPipelineLayoutCreateInfo computeLayout{};
-        computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        computeLayout.pNext = nullptr;
-
-        computeLayout.setLayoutCount = 1;
-        computeLayout.pSetLayouts = &m_DrawImageDescriptorLayout;
-
-        VkPushConstantRange pushConstant;
-        pushConstant.offset = 0;
-        pushConstant.size = sizeof(ComputePushConstants);
-        pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        computeLayout.pushConstantRangeCount = 1;
-        computeLayout.pPushConstantRanges = &pushConstant;
-
-        VK_CHECK(vkCreatePipelineLayout(m_Device->GetDevice(), &computeLayout, nullptr, &m_ComputePipelineLayout))
-
-        // Create shader modules.
-        VkShaderModule raytraceShaderModule;
-        if (!VulkanUtils::CreateShaderModule(m_Device->GetDevice(), "Shaders/raytrace.comp.spv",
-                                             &raytraceShaderModule)) {
-            Log::RtFatal({0x02, 0x00}, "Failed to build the raytrace shader module.");
-        }
-
-        VkPipelineShaderStageCreateInfo stageInfo{};
-        stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stageInfo.pNext = nullptr;
-        stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        stageInfo.module = raytraceShaderModule;
-        stageInfo.pName = "main";
-
-
-        VkComputePipelineCreateInfo computePipelineCreateInfo{};
-        computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        computePipelineCreateInfo.pNext = nullptr;
-        computePipelineCreateInfo.layout = m_ComputePipelineLayout;
-        computePipelineCreateInfo.stage = stageInfo;
-
-        m_Raytrace.Layout = m_ComputePipelineLayout;
-        m_Raytrace.Data = {};
-
-        VK_CHECK(
-            vkCreateComputePipelines(m_Device->GetDevice(), VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr,
-                &m_Raytrace.Pipeline))
-
-        vkDestroyShaderModule(m_Device->GetDevice(), raytraceShaderModule, nullptr);
-
-        m_MainDeletionQueue.PushFunction([this]() {
-            vkDestroyPipelineLayout(m_Device->GetDevice(), m_ComputePipelineLayout, nullptr);
-            vkDestroyPipeline(m_Device->GetDevice(), m_Raytrace.Pipeline, nullptr);
-        });
-    }
-
-    void VulkanRenderer::Raytrace(const VkCommandBuffer commandBuffer) const {
-        // Bind the gradient drawing compute pipeline.
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Raytrace.Pipeline);
-
-        // Bind the descriptor set containing the draw image for the compute pipeline.
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipelineLayout, 0, 1,
-                                &m_DrawImageDescriptors, 0, nullptr);
-
-        vkCmdPushConstants(commandBuffer, m_ComputePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                           sizeof(ComputePushConstants), &m_Raytrace.Data);
-
-        // Execute the compute pipeline dispatch. The workgroup size is 16x16, so we need to divide by it.
-        vkCmdDispatch(commandBuffer, static_cast<u32>(std::ceil(m_DrawExtent.width / 16.0)),
-                      static_cast<u32>(std::ceil(m_DrawExtent.height / 16.0)), 1);
-    }
 
     void VulkanRenderer::RecreateSwapchain(Window& window) {
         vkDeviceWaitIdle(m_Device->GetDevice());

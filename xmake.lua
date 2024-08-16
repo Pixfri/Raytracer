@@ -32,7 +32,7 @@ target("Raytracer")
 
     set_targetdir("build/" .. outputdir .. "/Raytracer/bin")
     set_objectdir("build/" .. outputdir .. "/Raytracer/obj")
-
+    
     add_files("Source/**.cpp")
     add_headerfiles("Include/**.hpp", "Include/**.inl")
     add_includedirs("Include/")
@@ -42,4 +42,5 @@ target("Raytracer")
 
     set_pcxxheader("Include/Raytracer/rtpch.hpp")
     
-    add_packages("spdlog", "glfw", "vulkan-loader", "vk-bootstrap", "vulkan-memory-allocator", "vulkan-utility-libraries", "glm")
+    add_packages("spdlog", "glfw", "vulkan-loader", "vk-bootstrap", "vulkan-memory-allocator", "vulkan-utility-libraries", "glm", {public = true})
+    

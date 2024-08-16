@@ -7,6 +7,9 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
+#include <functional>
+#include <ranges>
 
 namespace Raytracer {
     // Engine type definitions
@@ -24,4 +27,21 @@ namespace Raytracer {
 
     using f32 = float;
     using f64 = double;
+
+    struct DeletionQueue {
+        std::deque<std::function<void()>> Deletors;
+
+        void PushFunction(std::function<void()>&& function) {
+            Deletors.push_back(std::move(function));
+        }
+
+        void Flush() {
+            // Reverse iterate the deletion queue to execute all the functions.
+            for (auto& deletor : std::ranges::reverse_view(Deletors)) {
+                deletor();
+            }
+
+            Deletors.clear();
+        }
+    };
 }

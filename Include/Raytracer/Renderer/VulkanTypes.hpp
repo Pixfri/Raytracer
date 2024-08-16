@@ -9,6 +9,7 @@
 #pragma once
 
 #include <Raytracer/rtpch.hpp>
+// ReSharper disable once CppUnusedIncludeDirective
 #include <Raytracer/Core/Logger.hpp>
 
 #include <vulkan/vulkan.h>
@@ -19,10 +20,6 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
-
-#include <deque>
-#include <functional>
-#include <ranges>
 
 namespace Raytracer {
     enum class DebugLevel : u8 {
@@ -35,23 +32,6 @@ namespace Raytracer {
     };
 
     namespace Renderer {
-        struct DeletionQueue {
-            std::deque<std::function<void()>> Deletors;
-
-            void PushFunction(std::function<void()>&& function) {
-                Deletors.push_back(std::move(function));
-            }
-
-            void Flush() {
-                // Reverse iterate the deletion queue to execute all the functions.
-                for (auto& deletor : std::ranges::reverse_view(Deletors)) {
-                    deletor();
-                }
-
-                Deletors.clear();
-            }
-        };
-
         struct AllocatedImage {
             VkImage Image;
             VkImageView ImageView;

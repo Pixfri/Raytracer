@@ -22,8 +22,8 @@ on_run(function()
     local className = path.basename(classPath)
 
     local files = {
-        { TargetPath = path.join("Include/Raytracer", classPath) .. ".hpp", Template = headerTemplate },
-        { TargetPath = path.join("Include/Raytracer", classPath) .. ".inl", Template = inlineTemplate }
+        { TargetPath = path.join("Include", classPath) .. ".hpp", Template = headerTemplate },
+        { TargetPath = path.join("Include", classPath) .. ".inl", Template = inlineTemplate }
     }
 
     if not option.get("nocpp") then
@@ -57,7 +57,7 @@ headerTemplate = [[
 
 #pragma once
 
-#include <Raytracer/rtpch.hpp>
+#include <rtpch.hpp>
 
 namespace Raytracer {
     class %CLASS_NAME% {
@@ -75,7 +75,7 @@ namespace Raytracer {
     };
 }
 
-#include <Raytracer/%CLASS_PATH%.inl>
+#include <%CLASS_PATH%.inl>
 ]]
 
 inlineTemplate = [[
@@ -94,7 +94,7 @@ sourceTemplate = [[
 // This file is part of the "Raytracer" project.
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <Raytracer/%CLASS_PATH%.hpp>
+#include <%CLASS_PATH%.hpp>
 
 namespace Raytracer {
 }

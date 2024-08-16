@@ -27,6 +27,8 @@ namespace Raytracer {
 
         m_Renderer = std::make_unique<Renderer::VulkanRenderer>(*m_Window, debugLevel);
 
+        m_RaytracingRenderer = std::make_unique<ApplicationRenderer>(m_Renderer.get());        
+
         m_IsRunning = true;
 
         Log::RtInfo("Application started.");
@@ -55,15 +57,17 @@ namespace Raytracer {
     }
 
     void Application::OnUpdate() {
-        
     }
 
-    void Application::OnRender() {
-        m_Renderer->Draw(*m_Window);
+    void Application::OnRender() const {
+        const auto commandBuffer = m_Renderer->BeginCommandBuffer(*m_Window);
+        
+        m_RaytracingRenderer->Raytrace(commandBuffer);
+        
+        m_Renderer->EndCommandBuffer(*m_Window);
     }
 
     void Application::OnEvent(Event& event) {
-        
     }
 
     void Application::OnWindowClose(WindowCloseEvent& event) {

@@ -4,11 +4,14 @@
 
 #pragma once
 
+
 #include <Raytracer/rtpch.hpp>
 
 #include <Raytracer/Core/Window.hpp>
 
 #include <Raytracer/Renderer/VulkanRenderer.hpp>
+
+#include <Raytracer/ApplicationRenderer.hpp>
 
 #include <chrono>
 
@@ -33,7 +36,6 @@ namespace Raytracer {
     private:
         static Application* m_SInstance;
 
-
         std::chrono::high_resolution_clock::time_point m_CurrentTime;
 
         bool m_IsRunning = false;
@@ -42,9 +44,12 @@ namespace Raytracer {
 
         std::unique_ptr<Window> m_Window;
         std::unique_ptr<Renderer::VulkanRenderer> m_Renderer;
+        std::unique_ptr<ApplicationRenderer> m_RaytracingRenderer;
+
+        DeletionQueue m_ApplicationDeletionQueue;
         
         void OnUpdate();
-        void OnRender();
+        void OnRender() const;
         void OnEvent(Event& event);
 
         inline void Close();
