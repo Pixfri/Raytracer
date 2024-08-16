@@ -11,7 +11,7 @@
 namespace Raytracer {
     Application* Application::m_SInstance = nullptr;
 
-    Application::Application(const WindowProperties& properties) {
+    Application::Application(const WindowProperties& properties, const DebugLevel& debugLevel) {
         assert(!m_SInstance && "Only one instance of this application can run at a time.");
 
         m_SInstance = this;
@@ -24,6 +24,8 @@ namespace Raytracer {
             dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnWindowClose));
             OnEvent(event);
         });
+
+        m_Renderer = std::make_unique<Renderer::VulkanRenderer>(*m_Window, debugLevel);
 
         m_IsRunning = true;
 
@@ -57,7 +59,7 @@ namespace Raytracer {
     }
 
     void Application::OnRender() {
-        
+        m_Renderer->Draw(*m_Window);
     }
 
     void Application::OnEvent(Event& event) {

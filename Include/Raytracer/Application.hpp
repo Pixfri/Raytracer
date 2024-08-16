@@ -8,12 +8,14 @@
 
 #include <Raytracer/Core/Window.hpp>
 
+#include <Raytracer/Renderer/VulkanRenderer.hpp>
+
 #include <chrono>
 
 namespace Raytracer {
     class Application {
     public:
-        explicit Application(const WindowProperties& properties);
+        Application(const WindowProperties& properties, const DebugLevel& debugLevel);
         ~Application();
         
         Application(const Application&) = delete;
@@ -39,6 +41,7 @@ namespace Raytracer {
         f64 m_DeltaTime = 0.016;
 
         std::unique_ptr<Window> m_Window;
+        std::unique_ptr<Renderer::VulkanRenderer> m_Renderer;
         
         void OnUpdate();
         void OnRender();

@@ -16,15 +16,19 @@ end
 
 includes("xmake/**.lua") 
 
+add_repositories("pixfri https://github.com/Pixfri/xmake-repo.git")
+
 add_requires("spdlog v1.9.0", "glfw 3.4", "vulkan-loader 1.3.290+0", "vk-bootstrap v1.3.290", 
-             "vulkan-memory-allocator v3.1.0", "vulkan-utility-libraries v1.3.290")
+             "vulkan-memory-allocator v3.1.0", "vulkan-utility-libraries v1.3.290", "glm 1.0.1")
+add_requires("glslang 1.3.290+0", {configs = {binaryonly = true}})
              
-add_defines("GLFW_INCLUDE_VULKAN", "VK_NO_PROTOTYPES")
+add_defines("GLFW_INCLUDE_VULKAN")
 
 local outputdir = "$(mode)-$(os)-$(arch)"
 
 target("Raytracer")
     set_kind("binary")
+    add_rules("utils.glsl2spv", {outputdir = "build/" .. outputdir .. "/Raytracer/bin/Shaders"})
 
     set_targetdir("build/" .. outputdir .. "/Raytracer/bin")
     set_objectdir("build/" .. outputdir .. "/Raytracer/obj")
@@ -32,7 +36,10 @@ target("Raytracer")
     add_files("Source/**.cpp")
     add_headerfiles("Include/**.hpp", "Include/**.inl")
     add_includedirs("Include/")
+    
+    add_files("Shaders/**.comp") -- Tell glsl2spv to compile the files.
+    add_headerfiles("Shaders/**") -- A trick to make them show up in VS/Rider solutions.
 
     set_pcxxheader("Include/Raytracer/rtpch.hpp")
     
-    add_packages("spdlog", "glfw", "vulkan-loader", "vk-bootstrap", "vulkan-memory-allocator", "vulkan-utility-libraries")
+    add_packages("spdlog", "glfw", "vulkan-loader", "vk-bootstrap", "vulkan-memory-allocator", "vulkan-utility-libraries", "glm")
