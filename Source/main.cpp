@@ -1,14 +1,11 @@
-#include <Raytracer/Core/Logger.hpp>
+#include <Raytracer/Application.hpp>
 
 int main() {
-    Raytracer::Logger::Init();
+    Raytracer::WindowProperties properties{1920, 1080, "Raytracer", false, false};
 
-    Raytracer::Log::RtTrace("Logger Test.");
-    Raytracer::Log::RtInfo("Logger Test.");
-    Raytracer::Log::RtWarn("Logger Test.");
-    Raytracer::Log::RtError("Logger Test.");
-    Raytracer::Log::RtCritical("Logger Test.");
-    Raytracer::Log::RtFatal({0x00, 0x00}, "Logger Test.");
+    const auto app = std::make_unique<Raytracer::Application>(properties);
 
-    return 0;
+    app->Run();
+
+    return EXIT_SUCCESS;
 }
