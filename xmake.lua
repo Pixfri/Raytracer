@@ -16,6 +16,8 @@ end
 
 includes("xmake/**.lua") 
 
+add_requires("spdlog v1.9.0")
+
 local outputdir = "$(mode)-$(os)-$(arch)"
 
 target("Raytracer")
@@ -25,7 +27,9 @@ target("Raytracer")
     set_objectdir("build/" .. outputdir .. "/Raytracer/obj")
 
     add_files("Source/**.cpp")
-    add_headerfiles("Include/**.hpp")
+    add_headerfiles("Include/**.hpp", "Include/**.inl")
     add_includedirs("Include/")
 
     set_pcxxheader("Include/Raytracer/rtpch.hpp")
+    
+    add_packages("spdlog")
