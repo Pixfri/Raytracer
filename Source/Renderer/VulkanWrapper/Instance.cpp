@@ -109,6 +109,10 @@ namespace Raytracer::Renderer::VulkanWrapper {
                .add_debug_messenger_type(messageType)
                .set_debug_callback(DebugCallback);
 
+        if (debugLevel > DebugLevel::None) {
+            builder.enable_layer("VK_LAYER_LUNARG_monitor");
+        }
+
         auto builderResult = builder.build();
 
         m_VkbInstance = builderResult.value();
