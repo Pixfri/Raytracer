@@ -57,7 +57,7 @@ headerTemplate = [[
 
 #pragma once
 
-#include <rtpch.hpp>
+#include <Raytracer/rtpch.hpp>
 
 namespace Raytracer {
     class %CLASS_NAME% {
