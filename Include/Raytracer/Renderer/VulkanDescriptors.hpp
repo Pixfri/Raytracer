@@ -74,6 +74,7 @@ namespace Raytracer::Renderer {
                         VkDescriptorType type);
         void WriteBuffer(u32 binding, VkBuffer buffer, VkDeviceSize size, VkDeviceSize offset,
                          VkDescriptorType type);
+        void WriteAccelerationStructure(u32 binding, VkAccelerationStructureKHR accelerationStructure);
 
         void Clear();
         void UpdateSet(VkDevice device, VkDescriptorSet set);

@@ -37,7 +37,7 @@ target("Raytracer")
     add_headerfiles("Include/**.hpp", "Include/**.inl")
     add_includedirs("Include/")
     
-    add_files("Shaders/**.comp") -- Tell glsl2spv to compile the files.
+    add_files("Shaders/**.vert", "Shaders/**.frag") -- Tell glsl2spv to compile the files.
     add_headerfiles("Shaders/**") -- A trick to make them show up in VS/Rider solutions.
 
     set_pcxxheader("Include/Raytracer/rtpch.hpp")

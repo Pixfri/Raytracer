@@ -17,6 +17,12 @@ namespace Raytracer {
         m_SInstance = this;
 
         Logger::Init();
+        
+        m_Camera.Velocity = glm::vec3(0.f);
+        m_Camera.Position = glm::vec3(0.f, 0.f, -2.5f);
+
+        m_Camera.Pitch = 0;
+        m_Camera.Yaw = 0;
 
         m_Window = std::make_unique<Window>(properties);
         m_Window->SetEventCallback([this](Event& event) {
@@ -27,7 +33,7 @@ namespace Raytracer {
 
         m_Renderer = std::make_unique<Renderer::VulkanRenderer>(*m_Window, debugLevel);
 
-        m_RaytracingRenderer = std::make_unique<RaytracingRenderer>(m_Renderer.get());        
+        m_RayQueryRenderer = std::make_unique<RayQueryRenderer>(m_Renderer.get(), m_Camera);
 
         m_IsRunning = true;
 
@@ -57,20 +63,38 @@ namespace Raytracer {
     }
 
     void Application::OnUpdate() {
+        m_Camera.Update();
     }
 
     void Application::OnRender() const {
         const auto commandBuffer = m_Renderer->BeginCommandBuffer(*m_Window);
-        
-        m_RaytracingRenderer->Raytrace(commandBuffer);
-        
+
         m_Renderer->EndCommandBuffer(*m_Window);
     }
 
     void Application::OnEvent(Event& event) {
+        EventDispatcher dispatcher(event);
+        dispatcher.Dispatch<MouseMovedEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnMouseMovement));
+        dispatcher.Dispatch<KeyDownEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnKeyDown));
+        dispatcher.Dispatch<KeyUpEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnKeyUp));
     }
 
-    void Application::OnWindowClose(WindowCloseEvent& event) {
+    void Application::OnWindowClose(const WindowCloseEvent& event) {
+        (void)event;
+
         m_IsRunning = false;
     }
+
+    void Application::OnMouseMovement(const MouseMovedEvent& event) {
+        m_Camera.OnMouseMovement(event.GetX(), event.GetY(), 0.1f, m_DeltaTime);
+    }
+
+    void Application::OnKeyDown(const KeyDownEvent& event) {
+        m_Camera.OnKeyDown(event.GetScancode(), m_DeltaTime, 3);
+    }
+
+    void Application::OnKeyUp(const KeyUpEvent& event) {
+        m_Camera.OnKeyUp(event.GetScancode());
+    }
+
 }

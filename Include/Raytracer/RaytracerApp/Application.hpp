@@ -11,7 +11,7 @@
 
 #include <Raytracer/Renderer/VulkanRenderer.hpp>
 
-#include <Raytracer/RaytracerApp/RaytracingRenderer.hpp>
+#include <Raytracer/RaytracerApp/RayQueryRenderer.hpp>
 
 #include <chrono>
 
@@ -44,7 +44,9 @@ namespace Raytracer {
 
         std::unique_ptr<Window> m_Window;
         std::unique_ptr<Renderer::VulkanRenderer> m_Renderer;
-        std::unique_ptr<RaytracingRenderer> m_RaytracingRenderer;
+        std::unique_ptr<RayQueryRenderer> m_RayQueryRenderer;
+
+        Camera m_Camera;
 
         DeletionQueue m_ApplicationDeletionQueue;
         
@@ -55,7 +57,10 @@ namespace Raytracer {
         inline void Close();
 
         // -------- Event handlers --------
-        void OnWindowClose(WindowCloseEvent& event);
+        void OnWindowClose(const WindowCloseEvent& event);
+        void OnMouseMovement(const MouseMovedEvent& event);
+        void OnKeyDown(const KeyDownEvent& event);
+        void OnKeyUp(const KeyUpEvent& event);
     };
 }
 

@@ -22,8 +22,8 @@ on_run(function()
     local className = path.basename(classPath)
 
     local files = {
-        { TargetPath = path.join("Include", classPath) .. ".hpp", Template = headerTemplate },
-        { TargetPath = path.join("Include", classPath) .. ".inl", Template = inlineTemplate }
+        { TargetPath = path.join("Include/Raytracer", classPath) .. ".hpp", Template = headerTemplate },
+        { TargetPath = path.join("Include/Raytracer", classPath) .. ".inl", Template = inlineTemplate }
     }
 
     if not option.get("nocpp") then
@@ -57,7 +57,7 @@ headerTemplate = [[
 
 #pragma once
 
-#include <rtpch.hpp>
+#include <Raytracer/rtpch.hpp>
 
 namespace Raytracer {
     class %CLASS_NAME% {

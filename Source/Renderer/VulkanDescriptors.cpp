@@ -228,6 +228,25 @@ namespace Raytracer::Renderer {
         Writes.push_back(write);
     }
 
+    void DescriptorWriter::WriteAccelerationStructure(const u32 binding,
+                                                      const VkAccelerationStructureKHR accelerationStructure) {
+        VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructuresInfo{};
+        descriptorAccelerationStructuresInfo.sType =
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+        descriptorAccelerationStructuresInfo.accelerationStructureCount = 1;
+        descriptorAccelerationStructuresInfo.pAccelerationStructures = &accelerationStructure;
+
+        VkWriteDescriptorSet accelerationStructureWrite{};
+        accelerationStructureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        accelerationStructureWrite.dstBinding = binding;
+        accelerationStructureWrite.descriptorCount = 1;
+        accelerationStructureWrite.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        accelerationStructureWrite.pNext = &descriptorAccelerationStructuresInfo;
+
+        Writes.push_back(accelerationStructureWrite);
+    }
+
+
     void DescriptorWriter::Clear() {
         ImageInfos.clear();
         Writes.clear();
