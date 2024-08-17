@@ -12,9 +12,6 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
-
 namespace Raytracer::Renderer {
 
     VulkanRenderer::VulkanRenderer(const Window& window, const DebugLevel& debugLevel) {
@@ -385,7 +382,8 @@ namespace Raytracer::Renderer {
 
         const VkFormat swapchainImageFormat = m_Swapchain->GetSwapchainImageFormat();
         // Dynamic rendering parameters for ImGui to use.
-        initInfo.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+        initInfo.PipelineRenderingCreateInfo = {};
+        initInfo.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         initInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
         initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchainImageFormat;
 
