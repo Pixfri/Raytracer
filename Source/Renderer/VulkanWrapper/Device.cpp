@@ -20,13 +20,26 @@ namespace Raytracer::Renderer::VulkanWrapper {
         features12.bufferDeviceAddress = VK_TRUE;
         features12.descriptorIndexing = VK_TRUE;
 
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR
+        };
+        rayTracingFeatures.rayTracingPipeline = VK_TRUE;
+
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR
+        };
+        accelerationStructureFeatures.accelerationStructure = VK_TRUE;
+
         Log::RtTrace("Selecting Vulkan physical device & creating Vulkan logical device...");
         vkb::PhysicalDeviceSelector selector{instance.GetVkbInstance()};
+
         vkb::PhysicalDevice physicalDevice = selector
                                              .set_minimum_version(1, 3)
                                              .set_required_features_13(features)
                                              .set_required_features_12(features12)
                                              .set_surface(instance.GetSurface())
+                                             .add_required_extension_features(rayTracingFeatures)
+                                             .add_required_extension_features(accelerationStructureFeatures)
                                              .select()
                                              .value();
 

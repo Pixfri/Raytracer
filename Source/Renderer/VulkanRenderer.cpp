@@ -194,9 +194,8 @@ namespace Raytracer::Renderer {
         const VkExtent3D drawImageExtent = {
             static_cast<u32>(window.GetWidth()), static_cast<u32>(window.GetHeight()), 1
         };
-
-        // Hardcoding the draw format to a 32-bit float.
-        DrawImage.ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+        
+        DrawImage.ImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
         DrawImage.ImageExtent = drawImageExtent;
 
         VkImageUsageFlags drawImageUsages{};

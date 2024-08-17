@@ -11,7 +11,7 @@
 
 #include <Raytracer/Renderer/VulkanRenderer.hpp>
 
-#include <Raytracer/ApplicationRenderer.hpp>
+#include <Raytracer/RaytracerApp/RaytracingRenderer.hpp>
 
 #include <chrono>
 
@@ -44,7 +44,7 @@ namespace Raytracer {
 
         std::unique_ptr<Window> m_Window;
         std::unique_ptr<Renderer::VulkanRenderer> m_Renderer;
-        std::unique_ptr<ApplicationRenderer> m_RaytracingRenderer;
+        std::unique_ptr<RaytracingRenderer> m_RaytracingRenderer;
 
         DeletionQueue m_ApplicationDeletionQueue;
         
@@ -59,4 +59,4 @@ namespace Raytracer {
     };
 }
 
-#include <Raytracer/Application.inl>
+#include <Raytracer/RaytracerApp/Application.inl>

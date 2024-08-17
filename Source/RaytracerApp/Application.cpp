@@ -2,7 +2,7 @@
 // This file is part of the "Raytracer" project.
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <Raytracer/Application.hpp>
+#include <Raytracer/RaytracerApp/Application.hpp>
 
 #include <Raytracer/Core/Logger.hpp>
 
@@ -27,7 +27,7 @@ namespace Raytracer {
 
         m_Renderer = std::make_unique<Renderer::VulkanRenderer>(*m_Window, debugLevel);
 
-        m_RaytracingRenderer = std::make_unique<ApplicationRenderer>(m_Renderer.get());        
+        m_RaytracingRenderer = std::make_unique<RaytracingRenderer>(m_Renderer.get());        
 
         m_IsRunning = true;
 

@@ -1,4 +1,4 @@
-#include <Raytracer/Application.hpp>
+#include <Raytracer/RaytracerApp/Application.hpp>
 
 int main() {
     Raytracer::WindowProperties properties{1920, 1080, "Raytracer", false, false};
