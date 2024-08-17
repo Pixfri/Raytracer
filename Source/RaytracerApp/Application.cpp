@@ -6,6 +6,8 @@
 
 #include <Raytracer/Core/Logger.hpp>
 
+#include <imgui.h>
+
 #include <cassert>
 
 namespace Raytracer {
@@ -64,9 +66,18 @@ namespace Raytracer {
 
     void Application::OnUpdate() {
         m_Camera.Update();
+
+        if (m_Fov != m_Camera.Fov) {
+            m_Camera.Fov = m_Fov;
+            m_Camera.Updated = true;
+        }
     }
 
-    void Application::OnRender() const {
+    void Application::OnRender() {
+        m_Renderer->BeginUi();
+
+        CreateUi();
+        
         const auto commandBuffer = m_Renderer->BeginCommandBuffer(*m_Window);
 
         m_Renderer->EndCommandBuffer(*m_Window);
@@ -77,6 +88,15 @@ namespace Raytracer {
         dispatcher.Dispatch<MouseMovedEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnMouseMovement));
         dispatcher.Dispatch<KeyDownEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnKeyDown));
         dispatcher.Dispatch<KeyUpEvent>(BIND_EVENT_TO_EVENT_HANDLER(Application::OnKeyUp));
+    }
+
+    void Application::CreateUi() {
+        if (ImGui::Begin("Camera")) {
+            ImGui::SliderFloat("Camera speed", &m_CameraSpeed, 0.1f, 10.f);
+            ImGui::SliderFloat("Mouse sensitivity", &m_MouseSensitivity, 0.1f, 10.f);
+            ImGui::SliderFloat("Camera FOV", &m_Fov, 45.f, 90.f);
+        }
+        ImGui::End();
     }
 
     void Application::OnWindowClose(const WindowCloseEvent& event) {

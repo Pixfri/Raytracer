@@ -70,6 +70,7 @@ namespace Raytracer::Renderer {
         void PlanDescriptorPoolsDeletion(DescriptorAllocatorGrowable& allocator);
         void PlanDeletion(std::function<void()>&& deletor);
 
+        static void BeginUi();
         VkCommandBuffer BeginCommandBuffer(const Window& window);
         void EndCommandBuffer(Window& window);
 
@@ -87,6 +88,9 @@ namespace Raytracer::Renderer {
         void InitializeFramesCommandBuffers();
         void InitializeImmediateCommandBuffer();
         void InitializeSynchronisationPrimitives();
+        void InitializeImGui(const Window& window);
+
+        void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView) const;
 
         [[nodiscard]] FrameData& GetCurrentFrame() {
             return m_Frames[m_FrameNumber % g_FrameOverlap];

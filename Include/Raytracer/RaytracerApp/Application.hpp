@@ -47,14 +47,19 @@ namespace Raytracer {
         std::unique_ptr<RayQueryRenderer> m_RayQueryRenderer;
 
         Camera m_Camera;
+        f32 m_CameraSpeed = 1.f;
+        f32 m_MouseSensitivity = 1.f;
+        f32 m_Fov = 70.f;
 
         DeletionQueue m_ApplicationDeletionQueue;
         
         void OnUpdate();
-        void OnRender() const;
+        void OnRender();
         void OnEvent(Event& event);
 
         inline void Close();
+
+        void CreateUi();
 
         // -------- Event handlers --------
         void OnWindowClose(const WindowCloseEvent& event);

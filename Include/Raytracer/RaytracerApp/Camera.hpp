@@ -8,6 +8,8 @@
 
 #include <glm/glm.hpp>
 
+#include <vulkan/vulkan.h>
+
 namespace Raytracer {
     class Camera {
         f32 m_LastMouseX = 960;
@@ -24,8 +26,10 @@ namespace Raytracer {
         f32 Pitch = {0.f};
         // Horizontal rotation
         f32 Yaw = {0.f};
+        f32 Fov = {70.f};
 
         glm::mat4 GetViewMatrix();
+        glm::mat4 GetProjectionMatrix(VkExtent2D viewportExtent) const;
         glm::mat4 GetRotationMatrix() const;
 
         void OnKeyDown(i32 keyScancode, f64 deltaTime, f32 speed);

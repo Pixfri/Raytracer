@@ -8,9 +8,12 @@
 #include <Raytracer/Renderer/VulkanUtils/VulkanImageUtils.hpp>
 #include <Raytracer/Renderer/VulkanUtils/VulkanPipelineUtils.hpp>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-
 
 namespace Raytracer::Renderer {
 
@@ -19,6 +22,7 @@ namespace Raytracer::Renderer {
         InitializeSwapchain(window);
         InitializeCommands();
         InitializeSynchronisationPrimitives();
+        InitializeImGui(window);
 
         m_RendererInitialized = true;
     }
@@ -44,7 +48,16 @@ namespace Raytracer::Renderer {
         m_MainDeletionQueue.PushFunction(std::move(deletor));
     }
 
+    void VulkanRenderer::BeginUi() {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+
+        ImGui::NewFrame();
+    }
+
     VkCommandBuffer VulkanRenderer::BeginCommandBuffer(const Window& window) {
+        ImGui::Render();
+
         const VkExtent2D swapchainExtent = m_Swapchain->GetSwapchainExtent();
 
         DrawExtent.width = static_cast<u32>(static_cast<f32>(std::min(
@@ -80,7 +93,7 @@ namespace Raytracer::Renderer {
     void VulkanRenderer::EndCommandBuffer(Window& window) {
         const auto& frame = GetCurrentFrame();
         const auto cmd = frame.MainCommandBuffer;
-        
+
         //transition the draw image and the swapchain image into their correct transfer layouts
         VulkanUtils::TransitionImage(cmd, DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL,
                                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -91,6 +104,8 @@ namespace Raytracer::Renderer {
         VulkanUtils::CopyImageToImage(cmd, DrawImage.Image,
                                       m_Swapchain->GetImageAtIndex(frame.SwapchainImageIndex), DrawExtent,
                                       m_Swapchain->GetSwapchainExtent());
+
+        DrawImGui(cmd, m_Swapchain->GetImageViewAtIndex(frame.SwapchainImageIndex));
 
         // set swapchain image layout to Present so we can show it on the screen
         VulkanUtils::TransitionImage(cmd, m_Swapchain->GetImageAtIndex(frame.SwapchainImageIndex),
@@ -194,7 +209,7 @@ namespace Raytracer::Renderer {
         const VkExtent3D drawImageExtent = {
             static_cast<u32>(window.GetWidth()), static_cast<u32>(window.GetHeight()), 1
         };
-        
+
         DrawImage.ImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
         DrawImage.ImageExtent = drawImageExtent;
 
@@ -323,6 +338,87 @@ namespace Raytracer::Renderer {
         });
     }
 
+    void VulkanRenderer::InitializeImGui(const Window& window) {
+        // 1: Create descriptor pool for ImGui
+        //    The pool is very oversize, but it's copied from ImGui demo
+        //    itself.
+        const VkDescriptorPoolSize poolSizes[] = {
+            {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
+        };
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        poolInfo.maxSets = 1000;
+        poolInfo.poolSizeCount = static_cast<u32>(std::size(poolSizes));
+        poolInfo.pPoolSizes = poolSizes;
+
+        VkDescriptorPool imguiPool;
+        VK_CHECK(vkCreateDescriptorPool(m_Device->GetDevice(), &poolInfo, nullptr, &imguiPool))
+
+        // 2: Initialize ImGui library.
+
+        ImGui::CreateContext();
+
+        ImGui_ImplGlfw_InitForVulkan(window.GetNativeWindow(), true);
+
+        ImGui_ImplVulkan_InitInfo initInfo = {};
+        initInfo.Instance = m_Instance->GetInstance();
+        initInfo.PhysicalDevice = m_Device->GetPhysicalDevice();
+        initInfo.Device = m_Device->GetDevice();
+        initInfo.QueueFamily = m_Device->GetGraphicsQueueFamilyIndex();
+        initInfo.Queue = m_Device->GetGraphicsQueue();
+        initInfo.DescriptorPool = imguiPool;
+        initInfo.MinImageCount = 3;
+        initInfo.ImageCount = 3;
+        initInfo.UseDynamicRendering = true;
+
+        const VkFormat swapchainImageFormat = m_Swapchain->GetSwapchainImageFormat();
+        // Dynamic rendering parameters for ImGui to use.
+        initInfo.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+        initInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+        initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchainImageFormat;
+
+        initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+        VkInstance instance = m_Instance->GetInstance();
+
+        ImGui_ImplVulkan_LoadFunctions([](const char* functionName, void* vulkanInstance) {
+            return vkGetInstanceProcAddr(*(static_cast<VkInstance*>(vulkanInstance)), functionName);
+        }, &instance);
+
+        ImGui_ImplVulkan_Init(&initInfo);
+
+        ImGui_ImplVulkan_CreateFontsTexture();
+
+        m_MainDeletionQueue.PushFunction([this, imguiPool]() {
+            ImGui_ImplVulkan_Shutdown();
+            vkDestroyDescriptorPool(m_Device->GetDevice(), imguiPool, nullptr);
+        });
+    }
+
+    void VulkanRenderer::DrawImGui(const VkCommandBuffer commandBuffer, const VkImageView targetImageView) const {
+        const VkRenderingAttachmentInfo colorAttachmentInfo = VulkanInit::AttachmentInfo(
+            targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        const VkRenderingInfo renderInfo = VulkanInit::RenderingInfo(m_Swapchain->GetSwapchainExtent(),
+                                                                     &colorAttachmentInfo, nullptr);
+
+        vkCmdBeginRendering(commandBuffer, &renderInfo);
+
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+
+        vkCmdEndRendering(commandBuffer);
+    }
 
     void VulkanRenderer::RecreateSwapchain(Window& window) {
         vkDeviceWaitIdle(m_Device->GetDevice());

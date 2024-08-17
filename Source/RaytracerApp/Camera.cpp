@@ -15,8 +15,13 @@ namespace Raytracer {
         const glm::mat4 cameraTranslation = glm::translate(glm::mat4(1.f), Position);
         const glm::mat4 cameraRotation = GetRotationMatrix();
         Updated = false;
-        
+
         return cameraTranslation * cameraRotation;
+    }
+
+    glm::mat4 Camera::GetProjectionMatrix(const VkExtent2D viewportExtent) const {
+        return glm::perspective(
+            Fov, static_cast<f32>(viewportExtent.width) / static_cast<f32>(viewportExtent.height), 0.1f, 10000.f);
     }
 
     glm::mat4 Camera::GetRotationMatrix() const {
@@ -32,17 +37,17 @@ namespace Raytracer {
             Velocity.z = -speed * deltaTime;
             Updated = true;
         }
-        
+
         if (keyScancode == static_cast<i32>(Keys::S)) {
             Velocity.z = speed * deltaTime;
             Updated = true;
         }
-        
+
         if (keyScancode == static_cast<i32>(Keys::A)) {
             Velocity.x = -speed * deltaTime;
             Updated = true;
         }
-        
+
         if (keyScancode == static_cast<i32>(Keys::D)) {
             Velocity.x = speed * deltaTime;
             Updated = true;

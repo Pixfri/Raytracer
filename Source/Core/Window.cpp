@@ -6,6 +6,8 @@
 
 #include <Raytracer/Core/Logger.hpp>
 
+#include <imgui_impl_glfw.h>
+
 namespace Raytracer {
     Window::Window(const WindowProperties& windowProperties) {
         if (!glfwInit()) {
@@ -152,6 +154,7 @@ namespace Raytracer {
     Window::~Window() {
         if (m_Window != nullptr) {
             Log::RtTrace("Destroying window.");
+            ImGui_ImplGlfw_Shutdown();
             glfwDestroyWindow(m_Window);
         }
 
