@@ -73,6 +73,7 @@ namespace Raytracer {
 
         void CreateBottomLevelAccelerationStructure();
         void CreateTopLevelAccelerationStructure();
+        void DeleteAccelerationStructure(const AccelerationStructure& accelerationStructure) const;
 
         ScratchBuffer CreateScratchBuffer(VkDeviceSize size) const;
         void DeleteScratchBuffer(const ScratchBuffer& scratchBuffer) const;
